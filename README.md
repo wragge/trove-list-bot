@@ -6,6 +6,8 @@ Create a Twitter bot that tweets [Trove](https://trove.nla.gov.au/) items from s
 
 The bot can tweet newly-added items, randomly-selected items, or both!
 
+For background information on this and other Trove bots see [Trove bots for all](http://101dhhacks.net/2018/01/21/trove-bots-for-all/).
+
 ## Getting prepared
 
 There's a few things you need before you can set up your own bot.
@@ -163,3 +165,11 @@ Just create an account with cron-job.org, or the service of your choice, and tel
 Unfortunately the Trove API is not as reliable or consistent as it should be. This means that some of the search requests made by the bot can take a long, long time (or die completely). If they take more than 30 seconds, Glitch will give up and close the connection. Web cron services impose a similar sort of time limit. This means that sometimes your tweets will fail. Until the Trove API gets a much-needed overhaul, there's not much that can be done about this. The good news is that no permanent damage is done to your bot, and it really doesn't matter much if it skips a tweet or two.
 
 Your web cron service should report any errors so you can keep an eye on things. The Glitch logs will also note any recent timeouts.
+
+## Hack this bot!
+
+For some suggestions on how you can modify the code of this bot to customise its behaviour see [Trove bots for all](http://101dhhacks.net/2018/01/21/trove-bots-for-all/).
+
+## Do you want more?
+
+If you find this useful or interesting you might like to [support me on Patreon](https://www.patreon.com/timsherratt). The more supporters I get, the more time I can spend on making things like this!
