@@ -11,7 +11,7 @@ app = Flask(__name__)
 
 APP_KEY = os.environ.get('APP_KEY')
 API_KEY = os.environ.get('TROVE_API_KEY')
-LIST_ID = os.environ.get('LIST_ID')
+LISTS = os.environ.get('LISTS')
 CONSUMER_KEY = os.environ.get('CONSUMER_KEY')
 CONSUMER_SECRET = os.environ.get('CONSUMER_SECRET')
 ACCESS_TOKEN = os.environ.get('ACCESS_TOKEN')
@@ -27,7 +27,11 @@ def tweet(message, image=None):
     else:
         api.update_status(message)
 
+def choose_list():
+  lists = [id.strip() for id in LISTS.split(',')]
+  return random.choice(lists)
 
+        
 def get_image(item):
     url = None
     image = None
@@ -48,6 +52,12 @@ def get_image(item):
         pass
     return image
 
+  
+def truncate(message, length):
+  if len(message) > length:
+    message = '{}...'.format(message[:length])
+  return message
+
 
 def prepare_message(item, message_type):
     if message_type == 'new':
@@ -56,10 +66,13 @@ def prepare_message(item, message_type):
         message = 'Another interesting item! {}: {}'
     details = None
     if item['zone'] == 'work':
-        details = '{} ({})'.format(item['title'], item['issued'])
+        try:
+            details = '{} ({})'.format(truncate(item['title'], 200), item['issued'])
+        except KeyError:
+            details = '{}'.format(truncate(item['title'], 200))
     elif item['zone'] == 'article':
         date = arrow.get(item['date'], 'YYYY-MM-DD')
-        details = '{}, \'{}\''.format(date.format('D MMM YYYY'), item['heading'])
+        details = '{}, \'{}\''.format(date.format('D MMM YYYY'), truncate(item['heading'], 200))
     if details:
         message = message.format(details, item['troveUrl'].replace('ndp/del', 'newspaper'))
     else:
@@ -67,19 +80,20 @@ def prepare_message(item, message_type):
     return message
 
 
-def update_ids(ids, new_ids):
+def update_ids(list, ids, new_ids):
     ids += new_ids
     if not os.path.exists('.data'):
         os.makedirs('.data')
-    with open(os.path.join('.data', 'ids.json'), 'wb') as ids_file:
+    with open(os.path.join('.data', '{}-ids.json'.format(list)), 'wb') as ids_file:
         json.dump(ids, ids_file)
 
 
-def get_ids():
+def get_ids(list):
     try:
-        with open(os.path.join('.data', 'ids.json'), 'rb') as ids_file:
+        with open(os.path.join('.data', '{}-ids.json'.format(list)), 'rb') as ids_file:
             ids = json.load(ids_file)
     except IOError:
+        print 'NOT FOUND'
         ids = []
     return ids
 
@@ -99,21 +113,24 @@ def home():
 @app.route('/new/')
 def tweet_new():
     status = 'nothing new to tweet'
+    list = choose_list()
     if authorised(request):
-        url = 'http://api.trove.nla.gov.au/list/{}?include=listItems&encoding=json&key={}'.format(LIST_ID, API_KEY)
+        url = 'http://api.trove.nla.gov.au/list/{}?include=listItems&encoding=json&key={}'.format(list, API_KEY)
+        print url
         response = requests.get(url)
         data = response.json()
         new_ids = []
         new_items = []
-        ids = get_ids()
+        ids = get_ids(list)
         for result in data['list'][0]['listItem']:
             for zone, item in result.items():
+              if zone in ['article', 'work']:
                 if item['id'] not in ids:
                     new_ids.append(item['id'])
                     if zone in ['article', 'work']:
                         item['zone'] = zone
                         new_items.append(item)
-        update_ids(ids, new_ids)
+        update_ids(list, ids, new_ids)
         if new_items:
             new_item = random.choice(new_items)
             message = prepare_message(new_item, 'new')
@@ -130,8 +147,9 @@ def tweet_new():
 @app.route('/random/')
 def tweet_random():
     status = 'nothing to tweet'
+    list = choose_list()
     if authorised(request):
-        url = 'http://api.trove.nla.gov.au/list/{}?include=listItems&encoding=json&key={}'.format(LIST_ID, API_KEY)
+        url = 'http://api.trove.nla.gov.au/list/{}?include=listItems&encoding=json&key={}'.format(list, API_KEY)
         response = requests.get(url)
         data = response.json()
         items = []
